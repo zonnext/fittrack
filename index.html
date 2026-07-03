@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitTrack Pro</title>
+    <title>FitTrack Pro v8.0</title>
     
     <!-- PWA Tam Ekran Modu Ayarları -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -323,7 +323,6 @@
     <div class="section">
         <h2>⚖️ Kilo & Ölçü Takibi</h2>
         <div class="input-row">
-            <!-- Virgülün çalışması için type="text" yapıldı ama decimal inputmode korundu -->
             <input type="text" id="weightInput" class="compact-input" inputmode="decimal" placeholder="Kilo (kg)">
             <input type="text" id="waistInput" class="compact-input" inputmode="decimal" placeholder="Bel (cm)">
             <button class="compact-btn" onclick="addWeightAndMeasurement()">Kaydet</button>
@@ -411,6 +410,18 @@
         <div id="reportDisplay" class="report-box"></div>
     </div>
 
+    <!-- GERİYE DÖNÜK UYUMLU AKILLI YEDEKLEME MODÜLÜ -->
+    <div class="section" style="border: 1px solid #ff453a;">
+        <h2 style="color: #ff453a;">📦 Veri Yedekleme & Yönetimi</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Uygulamayı güncellerken veya telefon değiştirirken verilerinin kaybolmaması için buradan yedek alabilirsin.</p>
+        <div class="input-row">
+            <button onclick="exportBackupData()" style="background-color: #34c759; flex: 1; font-size: 14px; padding: 12px 5px;">📥 Yedek İndir</button>
+            
+            <label for="importFileBtn" style="background-color: #007aff; color: white; border-radius: 8px; padding: 12px 5px; font-size: 14px; font-weight: 600; text-align: center; cursor: pointer; flex: 1;">📤 Yedek Yükle</label>
+            <input type="file" id="importFileBtn" accept=".json" onchange="importBackupData(event)" style="display: none;">
+        </div>
+    </div>
+
     <script>
         const programs = {
             'Push': ['Bench Press', 'Shoulder Press Machine', 'Pecdeck Fly', 'Cable Triceps Pushdown'],
@@ -437,13 +448,11 @@
             return `${d}.${m}.${y}`;
         }
 
-        // Gelen virgüllü string değerleri matematiksel işlemler ve grafik için noktaya çeviren yardımcı fonksiyon
         function cleanNumber(val) {
             if (!val) return '';
             return val.toString().replace(',', '.').trim();
         }
 
-        // Gösterim esnasında nokta yerine tekrar virgül basması için (Türkçe standartı)
         function formatDisplayNum(val) {
             if (!val) return '';
             return val.toString().replace('.', ',');
@@ -678,7 +687,6 @@
                     exBox.innerHTML += `
                         <div class="set-row-input">
                             <span class="set-label">${i+1}. Set</span>
-                            <!-- type="text" yapılarak virgül kilidi kırıldı -->
                             <input type="text" value="${formatDisplayNum(setObj.weight)}" placeholder="kg" inputmode="decimal" oninput="updateLiveSet('${exName}', ${i}, 'weight', this.value)">
                             <select onchange="updateLiveSet('${exName}', ${i}, 'reps', this.value)">${repsOptions}</select>
                         </div>
@@ -881,6 +889,87 @@
             });
         }
 
+        // --- GERİYE DÖNÜK UYUMLU AKTARTIM ALGORİTMALARI (EXPORT & IMPORT) ---
+        function exportBackupData() {
+            // Şablondaki tüm anahtarları içeren ana veri paketini oluşturuyoruz
+            const backupPackage = {
+                weights: weights,
+                workouts: workouts,
+                supplements: supplements,
+                exportDate: selectedDateStr,
+                appVersion: "8.0"
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPackage));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            
+            const now = new Date();
+            const fileDate = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`;
+            downloadAnchor.setAttribute("download", `fittrack_backup_${fileDate}.json`);
+            
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importBackupData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    
+                    // GERİYE DÖNÜK UYUMLULUK KONTROLÜ (Mergeliyor, patlatmıyor)
+                    let importedWeights = parsedData.weights || null;
+                    let importedWorkouts = parsedData.workouts || null;
+                    let importedSupplements = parsedData.supplements || null;
+
+                    let successMsg = "Verileriniz başarıyla tarandı:\n";
+
+                    // Eğer yüklenen dosyada ilgili alanlar varsa LocalStorage'ı güvenle besle, yoksa es geç
+                    if (importedWeights) {
+                        weights = importedWeights;
+                        localStorage.setItem('weights', JSON.stringify(weights));
+                        successMsg += "- Kilo & Ölçü Geçmişi Aktarıldı ✔\n";
+                    } else {
+                        successMsg += "- Kilo verisi bulunamadı (Es geçildi) ✖\n";
+                    }
+
+                    if (importedWorkouts) {
+                        workouts = importedWorkouts;
+                        localStorage.setItem('workouts', JSON.stringify(workouts));
+                        successMsg += "- Antrenman Geçmişi Aktarıldı ✔\n";
+                    } else {
+                        successMsg += "- Antrenman verisi bulunamadı (Es geçildi) ✖\n";
+                    }
+
+                    if (importedSupplements) {
+                        supplements = importedSupplements;
+                        localStorage.setItem('supplements', JSON.stringify(supplements));
+                        successMsg += "- Supplement Takvimi Aktarıldı ✔\n";
+                    } else {
+                        successMsg += "- Supplement verisi bulunamadı (Es geçildi) ✖\n";
+                    }
+
+                    // Ekranı ve grafikleri canlandır
+                    renderCalendar();
+                    renderWeights();
+                    renderSupplements();
+                    renderWorkouts();
+                    drawChart();
+
+                    alert(successMsg + "\nUygulama başarıyla güncellendi, eski verileriniz korundu aga!");
+                } catch (err) {
+                    alert("HATA: Dosya okunamadı veya geçersiz bir yedek dosyası seçtiniz.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Başlangıç tetiklemeleri
         renderCalendar();
         renderWeights();
         renderSupplements();
