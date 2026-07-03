@@ -63,14 +63,13 @@
         }
 
         .compact-input {
-            flex: 1;
-            min-width: 0;
+            width: 100%;
             background-color: #2c2c2e;
             border: none;
             border-radius: 8px;
-            padding: 10px 6px;
+            padding: 12px;
             color: white;
-            font-size: 14px;
+            font-size: 16px;
             outline: none;
             text-align: center;
         }
@@ -264,7 +263,7 @@
         }
         .set-label { width: 45px; font-size: 13px; font-weight: bold; color: var(--text-muted); flex-shrink: 0; }
         
-        .set-row-input input[type="number"] {
+        .set-row-input input {
             width: 50%;
             min-width: 0;
         }
@@ -282,7 +281,6 @@
         }
         .delete-btn { background: none; color: var(--accent-red); padding: 0; font-size: 14px; border: none; }
         .edit-btn { background: none; color: var(--accent-color); padding: 0; font-size: 14px; margin-right: 10px; border: none; }
-        .edit-btn:focus, .delete-btn:focus { outline: none; }
         .date { color: var(--text-muted); font-size: 14px; }
         
         .history-workout-card {
@@ -325,9 +323,9 @@
     <div class="section">
         <h2>⚖️ Kilo & Ölçü Takibi</h2>
         <div class="input-row">
-            <!-- inputmode ve pattern özellikleri ile sayısal klavye tetiklendi -->
-            <input type="number" id="weightInput" class="compact-input" step="0.1" inputmode="decimal" pattern="[0-9]*" placeholder="Kilo (kg)">
-            <input type="number" id="waistInput" class="compact-input" step="0.1" inputmode="decimal" pattern="[0-9]*" placeholder="Bel (cm)">
+            <!-- Virgülün çalışması için type="text" yapıldı ama decimal inputmode korundu -->
+            <input type="text" id="weightInput" class="compact-input" inputmode="decimal" placeholder="Kilo (kg)">
+            <input type="text" id="waistInput" class="compact-input" inputmode="decimal" placeholder="Bel (cm)">
             <button class="compact-btn" onclick="addWeightAndMeasurement()">Kaydet</button>
         </div>
         <div id="weightList"></div>
@@ -439,6 +437,18 @@
             return `${d}.${m}.${y}`;
         }
 
+        // Gelen virgüllü string değerleri matematiksel işlemler ve grafik için noktaya çeviren yardımcı fonksiyon
+        function cleanNumber(val) {
+            if (!val) return '';
+            return val.toString().replace(',', '.').trim();
+        }
+
+        // Gösterim esnasında nokta yerine tekrar virgül basması için (Türkçe standartı)
+        function formatDisplayNum(val) {
+            if (!val) return '';
+            return val.toString().replace('.', ',');
+        }
+
         // --- CALENDAR ---
         function renderCalendar() {
             const year = currentCalendarDate.getFullYear();
@@ -525,8 +535,8 @@
         }
         
         function addWeightAndMeasurement() {
-            const wVal = document.getElementById('weightInput').value;
-            const waistVal = document.getElementById('waistInput').value;
+            let wVal = cleanNumber(document.getElementById('weightInput').value);
+            let waistVal = cleanNumber(document.getElementById('waistInput').value);
             if (!wVal && !waistVal) return;
 
             const existingIndex = weights.findIndex(w => w.date === selectedDateStr);
@@ -550,9 +560,9 @@
             document.getElementById('weightList').innerHTML = dayWeights.map(w => `
                 <div class="list-item">
                     <div>
-                        <strong>${w.val ? w.val + ' kg' : ''}</strong> 
+                        <strong>${w.val ? formatDisplayNum(w.val) + ' kg' : ''}</strong> 
                         ${w.val && w.waist ? ' | ' : ''} 
-                        <strong>${w.waist ? 'Bel: ' + w.waist + ' cm' : ''}</strong>
+                        <strong>${w.waist ? 'Bel: ' + formatDisplayNum(w.waist) + ' cm' : ''}</strong>
                     </div>
                     <button class="delete-btn" onclick="deleteWeight(${w.id})">Sil</button>
                 </div>
@@ -646,7 +656,8 @@
 
         function updateLiveSet(exName, setIndex, field, value) {
             if (currentWorkout && currentWorkout.data[exName]) {
-                currentWorkout.data[exName][setIndex][field] = value.trim();
+                let cleanVal = field === 'weight' ? cleanNumber(value) : value.trim();
+                currentWorkout.data[exName][setIndex][field] = cleanVal;
             }
         }
 
@@ -667,8 +678,8 @@
                     exBox.innerHTML += `
                         <div class="set-row-input">
                             <span class="set-label">${i+1}. Set</span>
-                            <!-- inputmode ve pattern özellikleri buradaki sayı girişlerine de eklendi -->
-                            <input type="number" value="${setObj.weight}" placeholder="kg" inputmode="decimal" pattern="[0-9]*" oninput="updateLiveSet('${exName}', ${i}, 'weight', this.value)">
+                            <!-- type="text" yapılarak virgül kilidi kırıldı -->
+                            <input type="text" value="${formatDisplayNum(setObj.weight)}" placeholder="kg" inputmode="decimal" oninput="updateLiveSet('${exName}', ${i}, 'weight', this.value)">
                             <select onchange="updateLiveSet('${exName}', ${i}, 'reps', this.value)">${repsOptions}</select>
                         </div>
                     `;
@@ -756,7 +767,7 @@
                 for (let exName in w.data) {
                     exHtml += `<div class="history-workout-card"><strong>${exName}</strong>`;
                     w.data[exName].forEach((set, idx) => {
-                        exHtml += `<div class="history-set">Set ${idx+1}: ${set.weight || 0} kg x ${set.reps || 0} Tekrar</div>`;
+                        exHtml += `<div class="history-set">Set ${idx+1}: ${formatDisplayNum(set.weight) || 0} kg x ${set.reps || 0} Tekrar</div>`;
                     });
                     exHtml += `</div>`;
                 }
@@ -824,7 +835,7 @@
                 for (let ex in w.data) {
                     reportText += `  • ${ex}:\n`;
                     w.data[ex].forEach((set, idx) => {
-                        reportText += `    - Set ${idx+1}: ${set.weight} kg x ${set.reps} Tekrar\n`;
+                        reportText += `    - Set ${idx+1}: ${formatDisplayNum(set.weight)} kg x ${set.reps} Tekrar\n`;
                     });
                 }
                 reportText += `\n`;
@@ -849,8 +860,8 @@
 
             filtered.forEach(w => {
                 let details = [];
-                if(w.val) details.push(`${w.val} kg`);
-                if(w.waist) details.push(`Bel: ${w.waist} cm`);
+                if(w.val) details.push(`${formatDisplayNum(w.val)} kg`);
+                if(w.waist) details.push(`Bel: ${formatDisplayNum(w.waist)} cm`);
                 reportText += `📅 ${w.date} -> ${details.join(' | ')}\n`;
             });
             showReport(reportText);
