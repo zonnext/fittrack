@@ -3,10 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitTrack Pro v7.2</title>
+    <title>FitTrack Pro</title>
+    
+    <!-- PWA Tam Ekran Modu Ayarları -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FitTrack">
+    
+    <!-- İKON ENTEGRASYONLARI -->
+    <!-- iPhone Ana Ekran İkonu -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <!-- Tarayıcı Sekme İkonu (Favicon) -->
+    <link rel="icon" type="image/png" href="icon.png">
     
     <style>
         :root {
@@ -143,7 +151,6 @@
         }
         .day.today { border: 2px dashed var(--text-muted); }
         
-        /* Seçili Günün Çok Daha Belirgin Hali */
         .day.selected { 
             border: 2px solid var(--accent-color) !important;
             font-weight: bold !important;
@@ -248,7 +255,6 @@
             color: #ff9500;
         }
         
-        /* Sabit ve Eşit Esneme Sağlayan Yeni Set Sıra Tasarımı */
         .set-row-input {
             display: flex;
             align-items: center;
@@ -260,7 +266,6 @@
         }
         .set-label { width: 45px; font-size: 13px; font-weight: bold; color: var(--text-muted); flex-shrink: 0; }
         
-        /* Kilo ve tekrar alanını %50 - %50 kilitledik, ekrandan taşamaz */
         .set-row-input input[type="number"] {
             width: 50%;
             min-width: 0;
@@ -673,14 +678,22 @@
 
         function finishWorkout() {
             if (!currentWorkout) return;
+            
             let finalData = {};
             for (let ex in currentWorkout.data) {
                 let filledSets = currentWorkout.data[ex].filter(s => s.weight !== '');
                 if (filledSets.length > 0) finalData[ex] = filledSets;
             }
+            
+            // 1. GÜNCELLEME: Antrenman tamamen boşsa geçmişe hiç kaydetme, sormadan kapat
             if (Object.keys(finalData).length === 0) {
-                if (!confirm("Hiçbir set girmediniz. Boş kaydedilsin mi?")) return;
+                currentWorkout = null;
+                document.getElementById('activeWorkoutArea').style.display = 'none';
+                renderCalendar();
+                renderWorkouts();
+                return;
             }
+
             currentWorkout.data = finalData;
             
             workouts = workouts.filter(w => w.id !== currentWorkout.id && w.date.split(' ')[0] !== selectedDateStr);
@@ -725,6 +738,7 @@
             }
         }
 
+        // --- RENDER WORKOUTS ---
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             document.getElementById('historyTitle').innerText = `${selectedDateStr} Gününün Kaydı`;
@@ -768,7 +782,6 @@
             return new Date(parts[2], parts[1] - 1, parts[0]);
         }
 
-        // Düzeltilmiş filtreleme logic
         function getFilteredData(array, range, isWorkout = true) {
             const now = new Date();
             let filtered = [];
@@ -851,7 +864,6 @@
             document.getElementById('copyReportBtn').style.display = 'block';
         }
 
-        // Panoya kopyalama
         function copyReport() {
             const reportText = document.getElementById('reportDisplay').innerText;
             navigator.clipboard.writeText(reportText).then(() => {
