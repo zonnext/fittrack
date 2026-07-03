@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>FitTrack Pro v7</title>
+    <title>FitTrack Pro v7.1</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FitTrack">
@@ -53,6 +53,33 @@
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
+            width: 100%;
+        }
+
+        /* Küçültülmüş ve Taşmayı Önleyen Özel Kutu Tasarımları */
+        .compact-input {
+            flex: 1;
+            min-width: 0; /* iOS esneme hatasını engeller */
+            background-color: #2c2c2e;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 6px; /* İç boşluğu daralttık */
+            color: white;
+            font-size: 14px; /* Taşmayı önlemek için fontu bir tık küçülttük */
+            outline: none;
+            text-align: center;
+        }
+
+        .compact-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0; /* Butonun ezilmesini engeller */
         }
 
         input, select {
@@ -168,6 +195,8 @@
             font-size: 12px;
             background-color: #2c2c2e;
             border-radius: 6px;
+            color: white;
+            border: none;
         }
         .chart-filter-btn.active {
             background-color: var(--accent-color);
@@ -230,8 +259,8 @@
             padding: 10px 0;
             border-bottom: 1px solid var(--border-color);
         }
-        .delete-btn { background: none; color: var(--accent-red); padding: 0; font-size: 14px; }
-        .edit-btn { background: none; color: var(--accent-color); padding: 0; font-size: 14px; margin-right: 10px; }
+        .delete-btn { background: none; color: var(--accent-red); padding: 0; font-size: 14px; border: none; }
+        .edit-btn { background: none; color: var(--accent-color); padding: 0; font-size: 14px; margin-right: 10px; border: none; }
         .date { color: var(--text-muted); font-size: 14px; }
         
         .history-workout-card {
@@ -274,9 +303,9 @@
     <div class="section">
         <h2>⚖️ Kilo & Ölçü Takibi</h2>
         <div class="input-row">
-            <input type="number" id="weightInput" step="0.1" placeholder="Kilo (kg)">
-            <input type="number" id="waistInput" step="0.1" placeholder="Bel (cm)">
-            <button onclick="addWeightAndMeasurement()">Kaydet</button>
+            <input type="number" id="weightInput" class="compact-input" step="0.1" placeholder="Kilo (kg)">
+            <input type="number" id="waistInput" class="compact-input" step="0.1" placeholder="Bel (cm)">
+            <button class="compact-btn" onclick="addWeightAndMeasurement()">Kaydet</button>
         </div>
         <div id="weightList"></div>
 
@@ -373,7 +402,7 @@
 
         let currentCalendarDate = new Date();
         let selectedDateStr = formatDate(new Date());
-        let currentChartFilter = '1m'; // Varsayılan 1 ay
+        let currentChartFilter = '1m';
 
         let weights = JSON.parse(localStorage.getItem('weights')) || []; 
         let workouts = JSON.parse(localStorage.getItem('workouts')) || [];
@@ -440,7 +469,7 @@
             }
         }
 
-        // --- SUPPLEMENT TAKİBİ ---
+        // --- SUPPLEMENTS ---
         function renderSupplements() {
             const daySupps = supplements[selectedDateStr] || { kreatin: false, omega3: false, d3k2: false, magnezyum: false };
             document.getElementById('chk-kreatin').checked = daySupps.kreatin || false;
@@ -458,7 +487,7 @@
             renderSupplements();
         }
 
-        // --- WEIGHT & SCALABLE SVG CHART ---
+        // --- WEIGHT & CHART ---
         function setChartFilter(filterType) {
             currentChartFilter = filterType;
             document.querySelectorAll('.chart-filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -507,19 +536,17 @@
             `).join('') || '<p style="color:var(--text-muted); font-size:13px;">Bu gün için form kaydı yok.</p>';
         }
 
-        // SCALING ÖZELLİKLİ GRAFİK ÇİZİCİ
         function drawChart() {
             const svg = document.getElementById('trendChart');
             svg.innerHTML = '';
             
             const now = new Date();
-            let limitDays = 30; // 1m varsayılan
+            let limitDays = 30;
             if (currentChartFilter === '3m') limitDays = 90;
             if (currentChartFilter === '1w') limitDays = 7;
 
             const cutoffDate = new Date(now.getTime() - limitDays * 24 * 60 * 60 * 1000);
             
-            // Tarih sınırına uyan verileri filtrele ve eskiden yeniye sırala
             let chartData = weights.filter(w => parseDate(w.date) >= cutoffDate);
             chartData.sort((a, b) => parseDate(a.date) - parseDate(b.date));
 
@@ -532,7 +559,6 @@
             const height = 130;
             const padding = 20;
 
-            // Dinamik Scaling (Ölçeklendirme) Hesaplama
             let weightVals = chartData.filter(d => d.val).map(d => parseFloat(d.val));
             let waistVals = chartData.filter(d => d.waist).map(d => parseFloat(d.waist));
             
@@ -541,7 +567,6 @@
             let minB = waistVals.length ? Math.min(...waistVals) - 1 : 70;
             let maxB = waistVals.length ? Math.max(...waistVals) + 1 : 100;
 
-            // Eğer min ve max eşitse grafik patlamasın diye aralık aç
             if(minW === maxW) { minW -= 2; maxW += 2; }
             if(minB === maxB) { minB -= 2; maxB += 2; }
 
@@ -571,7 +596,7 @@
             }
         }
 
-        // --- WORKOUT LOGIC ---
+        // --- WORKOUT ---
         function startWorkout(type) {
             if (currentWorkout && !confirm("Mevcut aktif antrenmanı kapatıp yenisini açmak istiyor musun?")) return;
             currentWorkout = { id: Date.now(), type: type, date: `${selectedDateStr} - 12:00`, data: {} };
@@ -583,20 +608,10 @@
             renderActiveExercises();
         }
 
-        // OFF DAY KAYDETME FONKSİYONU
         function saveOffDay() {
             if (currentWorkout && !confirm("Aktif antrenmanı kapatıp bugünü Off Day yapmak istiyor musun?")) return;
-            
-            // O güne ait eski antrenman kaydı varsa sil veya üzerine yaz
             workouts = workouts.filter(w => w.date.split(' ')[0] !== selectedDateStr);
-            
-            const offDayObj = {
-                id: Date.now(),
-                type: 'OffDay',
-                date: `${selectedDateStr} - 00:00`,
-                data: {} // İçi boş olacak
-            };
-            
+            const offDayObj = { id: Date.now(), type: 'OffDay', date: `${selectedDateStr} - 00:00`, data: {} };
             workouts.unshift(offDayObj);
             localStorage.setItem('workouts', JSON.stringify(workouts));
             currentWorkout = null;
@@ -650,7 +665,6 @@
             }
             currentWorkout.data = finalData;
             
-            // Eğer o gün önceden Off Day yapıldıysa onu ezmek için temizle
             workouts = workouts.filter(w => w.id !== currentWorkout.id && w.date.split(' ')[0] !== selectedDateStr);
             workouts.unshift(currentWorkout);
 
@@ -664,7 +678,7 @@
 
         function editWorkout(id) {
             const target = workouts.find(w => w.id === id);
-            if (!target || target.type === 'OffDay') return; // Off day editlemeye gerek yok, silinebilir
+            if (!target || target.type === 'OffDay') return;
 
             currentWorkout = { id: target.id, type: target.type, date: target.date, data: {} };
             const defaultExercises = programs[target.type] || Object.keys(target.data);
@@ -730,7 +744,7 @@
             }).join('') || '<p style="color:var(--text-muted); font-size:13px;">Bu gün için antrenman veya Off Day kaydı yok.</p>';
         }
 
-        // --- RAPORLAMA LOGIC ---
+        // --- REPORT ---
         function parseDate(str) {
             const parts = str.split('.');
             return new Date(parts[2], parts[1] - 1, parts[0]);
@@ -825,7 +839,6 @@
             });
         }
 
-        // Başlangıç tetiklemeleri
         renderCalendar();
         renderWeights();
         renderSupplements();
