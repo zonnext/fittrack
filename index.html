@@ -11,9 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="FitTrack">
     
     <!-- İKON ENTEGRASYONLARI -->
-    <!-- iPhone Ana Ekran İkonu -->
     <link rel="apple-touch-icon" href="icon.png">
-    <!-- Tarayıcı Sekme İkonu (Favicon) -->
     <link rel="icon" type="image/png" href="icon.png">
     
     <style>
@@ -284,6 +282,7 @@
         }
         .delete-btn { background: none; color: var(--accent-red); padding: 0; font-size: 14px; border: none; }
         .edit-btn { background: none; color: var(--accent-color); padding: 0; font-size: 14px; margin-right: 10px; border: none; }
+        .edit-btn:focus, .delete-btn:focus { outline: none; }
         .date { color: var(--text-muted); font-size: 14px; }
         
         .history-workout-card {
@@ -326,8 +325,9 @@
     <div class="section">
         <h2>⚖️ Kilo & Ölçü Takibi</h2>
         <div class="input-row">
-            <input type="number" id="weightInput" class="compact-input" step="0.1" placeholder="Kilo (kg)">
-            <input type="number" id="waistInput" class="compact-input" step="0.1" placeholder="Bel (cm)">
+            <!-- inputmode ve pattern özellikleri ile sayısal klavye tetiklendi -->
+            <input type="number" id="weightInput" class="compact-input" step="0.1" inputmode="decimal" pattern="[0-9]*" placeholder="Kilo (kg)">
+            <input type="number" id="waistInput" class="compact-input" step="0.1" inputmode="decimal" pattern="[0-9]*" placeholder="Bel (cm)">
             <button class="compact-btn" onclick="addWeightAndMeasurement()">Kaydet</button>
         </div>
         <div id="weightList"></div>
@@ -667,7 +667,8 @@
                     exBox.innerHTML += `
                         <div class="set-row-input">
                             <span class="set-label">${i+1}. Set</span>
-                            <input type="number" value="${setObj.weight}" placeholder="kg" oninput="updateLiveSet('${exName}', ${i}, 'weight', this.value)">
+                            <!-- inputmode ve pattern özellikleri buradaki sayı girişlerine de eklendi -->
+                            <input type="number" value="${setObj.weight}" placeholder="kg" inputmode="decimal" pattern="[0-9]*" oninput="updateLiveSet('${exName}', ${i}, 'weight', this.value)">
                             <select onchange="updateLiveSet('${exName}', ${i}, 'reps', this.value)">${repsOptions}</select>
                         </div>
                     `;
@@ -685,7 +686,6 @@
                 if (filledSets.length > 0) finalData[ex] = filledSets;
             }
             
-            // 1. GÜNCELLEME: Antrenman tamamen boşsa geçmişe hiç kaydetme, sormadan kapat
             if (Object.keys(finalData).length === 0) {
                 currentWorkout = null;
                 document.getElementById('activeWorkoutArea').style.display = 'none';
@@ -738,7 +738,6 @@
             }
         }
 
-        // --- RENDER WORKOUTS ---
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             document.getElementById('historyTitle').innerText = `${selectedDateStr} Gününün Kaydı`;
